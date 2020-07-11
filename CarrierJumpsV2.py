@@ -1,37 +1,47 @@
 import pyodbc
 import numpy as np
 
-serverName = 'SQLServerExpress'
-databaseName = 'JumpPlans.dbo.eddbSystems'
+# Enter the name of your database here
+serverName = ''  
 
+# Enter the name of your database here
+databaseName = ''
+
+# Enter your start and end points here
 start = 'Lamaku'
-end = 'B133 Sector AB-N b7-0'
-currsys = []
-distance = 999999999
-jumps = 0
-filename = f"{start}_to_{end}_Jump_Route.txt"
-filename = filename.replace('*', '')
-filename = filename.replace(' ', '-')
-file = open(filename, 'w+')
+end = 'Colonia'
 
+currsys = [] 										# Var used in the while loop
+distance = 999999999 								# Arbitrary Var for distance, it only needs to be greater than the carrier jump range.
+jumps = 0 											# Var for the print statements
+filename = f"{start}_to_{end}_Jump_Route.txt"		# Filename for the output text file
+filename = filename.replace('*', '')				# Removes the special char for Sag A
+filename = filename.replace(' ', '-')
+file = open(filename, 'w+')							# Creates the file, or overwrites if it exists already
+
+# Queries the database for the start coordinates
 startquery = f"""
 SELECT a.x, a.y, a.z
 FROM {databaseName} as a
 WHERE a.[name] = '{start}'"""
 
+# Queries the database for the end coordinates
 endquery = f"""
 SELECT a.x, a.y, a.z
 FROM {databaseName} as a
 WHERE a.[name] = '{end}'"""
 
+# create a connection to your database
 cnxn = pyodbc.connect(f'DSN={serverName};Trusted_Connection=Yes')
 cursor = cnxn.cursor()
 
+# Grab starting coordinates from system in line 11, and print to console
 print(f"Gathering coordinates for {start} system")
 cursor.execute(startquery)
 startCoord = np.array(cursor.fetchall())
 print(f"{start} system coordinates, x:{startCoord[0, 0]} y:{startCoord[0, 1]} z:{startCoord[0, 2]}")
 
+# Grab end coordinates from system in line 12, and print to console
 print(f"\nGathering coordinates for {end} system")
 cursor.execute(endquery)
 endCoord = np.array(cursor.fetchall())
@@ -39,6 +49,7 @@ print(f"{end} system coordinates, x:{endCoord[0, 0]} y:{endCoord[0, 1]} z:{endCo
 
 print(f"Plotting a course from '{start}' to '{end}'\n")
 
+# Loop will cycle through all the systems and write to the text file as well as print it out on the console
 while currsys != end:
 
     systemsQuery = f"""
@@ -67,12 +78,10 @@ while currsys != end:
             fa.write(f"Jump {jumps} is to {end}.\n\nScript completed successfully")
 
     else:
-        # cnxn = pyodbc.connect('DSN=SQLServerExpress;Trusted_Connection=Yes')
         cursor = cnxn.cursor()
 
         cursor.execute(systemsQuery)
         results = np.array(cursor.fetchall())
-        # cnxn.close()
 
         currsys = results[0, 0]
         distance = results[0, 1]
